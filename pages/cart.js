@@ -8,7 +8,7 @@ import axios from "axios";
 import Table from "@/components/Table";
 import Input from "@/components/Input";
 import { RevealWrapper } from "next-reveal";
-import Footer from "@/components/Footer";
+import { useSession } from "next-auth/react";
 
 const ColumnsWrapper = styled.div`
   display: grid;
@@ -26,6 +26,11 @@ const Box = styled.div`
   padding: 30px;
 `;
 
+const ProductInfoCell = styled.td`
+  padding: 10px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+`;
+
 const ProductImageBox = styled.div`
   width: 70px;
   height: 100px;
@@ -35,7 +40,7 @@ const ProductImageBox = styled.div`
   align-items: center;
   justify-content: center;
   border-radius: 10px;
-  img{
+  img {
     max-width: 60px;
     max-height: 60px;
   }
@@ -43,7 +48,7 @@ const ProductImageBox = styled.div`
     padding: 10px;
     width: 100px;
     height: 100px;
-    img{
+    img {
       max-width: 80px;
       max-height: 80px;
     }
@@ -65,7 +70,10 @@ const CityHolder = styled.div`
 `;
 
 export default function CartPage() {
-  const { cartProducts, addProduct, removeProduct, clearCart } = useContext(CartContext);
+  const {cartProducts, addProduct, removeProduct, clearCart} = useContext(CartContext);
+  {/* ESTA PARTE ES DEL ACCOUNT inicio */}
+  const {data:session} = useSession();
+  {/* ESTA PARTE ES DEL ACCOUNT final */}
   const [products, setProducts] = useState([]);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -95,7 +103,21 @@ export default function CartPage() {
       clearCart();
     }
   }, []);
-
+  {/* ESTA PARTE ES DEL ACCOUNT 2parte inicio */}
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+    axios.get('/api/address').then(response => {
+      setName(response.data.name);
+      setEmail(response.data.email);
+      setCity(response.data.city);
+      setPostalCode(response.data.postalCode);
+      setStreetAddress(response.data.streetAddress);
+      setCountry(response.data.country);
+    });
+  }, [session]);
+  {/* ESTA PARTE ES DEL ACCOUNT 2parte fin */}
   function moreOfThisProduct(id) {
     addProduct(id);
   }
@@ -111,42 +133,6 @@ export default function CartPage() {
     if (response.data.url) {
       window.location = response.data.url;
     }
-  }
-
-  function getCartText() {
-    let cartText = '';
-    for (const product of products) {
-      const quantity = cartProducts.filter(id => id === product._id).length;
-      cartText += '- ' + product.title + ' (Cantidad: ' + quantity + ', Precio: ' + (quantity * product.price + ' mil COP') + ')%0a';
-    }
-    cartText += '%0a' + 'Total: $' + total + 'mil COP%0a';
-    cartText += 'Domicilio 5mil COP (Sur de Cali) otras areas 7milCOP%0a';
-    cartText += 'Domicilios a todo el País %0a';
-    return cartText;
-  }
-
-  async function gotowhatsapp() {
-    const nameValue = document.getElementById("name").value;
-    const cityValue = document.getElementById("city").value;
-    const postalCodeValue = document.getElementById("postalCode").value;
-    const emailValue = document.getElementById("email").value;
-    const streetAddressValue = document.getElementById("streetAddress").value;
-    const countryValue = document.getElementById("country").value;
-    const cartText = getCartText();
-
-    const streetAddressEncoded = encodeURIComponent(streetAddressValue);
-
-    const url = "https://wa.me/3023639624?text="
-      + "Hola ¡Champion Store! Estos son mis datos de compra:" + "%0a"
-      + "Nombre: " + nameValue + "%0a"
-      + "Ciudad: " + cityValue + "%0a"
-      + "Código postal: " + postalCodeValue + "%0a"
-      + "Email: " + emailValue + "%0a"
-      + "Dirección: " + streetAddressEncoded + "%0a"
-      + "País: " + countryValue + "%0a%0a"
-      + "Productos: " + "%0a" + cartText;
-  
-    window.open(url, '_blank').focus();
   }
 
   let total = 0;
@@ -191,15 +177,15 @@ export default function CartPage() {
                       <th>Price</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody>   
                     {products.map(product => (
                       <tr key={product._id}>
-                        <td>
+                        <ProductInfoCell>
                           <ProductImageBox>
-                            <img src={product.images[0]} alt={product.title}/>
+                            <img src={product.images[0]} alt=""/>
                           </ProductImageBox>
                           {product.title}
-                        </td>
+                        </ProductInfoCell>
                         <td>
                           <Button 
                             onClick={() => lessOfThisProduct(product._id)}
@@ -220,7 +206,7 @@ export default function CartPage() {
                       <td></td>
                       <td></td>
                       <td>${total}</td>
-                    </tr>
+                    </tr>           
                   </tbody>
                 </Table>
               )}
@@ -231,56 +217,46 @@ export default function CartPage() {
               <Box>
                 <h2>Order information</h2>
                 <Input type="text"
-                  id="name"
-                  placeholder="Name" 
-                  value={name}
-                  name="name" 
-                  onChange={ev => setName(ev.target.value)}/>
+                       placeholder="Name"
+                       value={name}
+                       name="name"
+                       onChange={ev => setName(ev.target.value)} />
+                <Input type="text"
+                       placeholder="Email"
+                       value={email}
+                       name="email"
+                       onChange={ev => setEmail(ev.target.value)}/>
                 <CityHolder>
                   <Input type="text"
-                    id="city"
-                    placeholder="City" 
-                    value={city}
-                    name="city" 
-                    onChange={ev => setCity(ev.target.value)} />
+                         placeholder="City"
+                         value={city}
+                         name="city"
+                         onChange={ev => setCity(ev.target.value)}/>
                   <Input type="text"
-                    id="postalCode"
-                    placeholder="PostalCode" 
-                    value={postalCode}
-                    name="postalCode" 
-                    onChange={ev => setPostalCode(ev.target.value)} />
+                         placeholder="Postal Code"
+                         value={postalCode}
+                         name="postalCode"
+                         onChange={ev => setPostalCode(ev.target.value)}/>
                 </CityHolder>
                 <Input type="text"
-                    id="email"
-                    placeholder="Email"
-                    value={email}
-                    name="email" 
-                    onChange={ev => setEmail(ev.target.value)}/>
+                       placeholder="Street Address"
+                       value={streetAddress}
+                       name="streetAddress"
+                       onChange={ev => setStreetAddress(ev.target.value)}/>
                 <Input type="text"
-                  id="streetAddress"
-                  placeholder="Street Address" 
-                  value={streetAddress}
-                  name="streetAddress" 
-                  onChange={ev => setStreetAddress(ev.target.value)}/>
-                <Input type="text"
-                  id="country"
-                  placeholder="Country" 
-                  value={country}
-                  name="country" 
-                  onChange={ev => setCountry(ev.target.value)}/>
-                <Button black
-                  block
-                  onClick={gotowhatsapp}>
-                    Continue to payment
+                       placeholder="Country"
+                       value={country}
+                       name="country"
+                       onChange={ev => setCountry(ev.target.value)}/>
+                <Button black block
+                        onClick={goToPayment}>
+                  Continue to payment
                 </Button>
               </Box>
             </RevealWrapper>
           )}
         </ColumnsWrapper>
       </Center>
-      <br />
-      <br />
-      <Footer />
     </>
   );
 }
